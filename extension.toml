@@ -1,6 +1,6 @@
 id = "jai"
 name = "Jai"
-version = "0.1.3"
+version = "0.1.4"
 schema_version = 1
 authors = ["Aman Tuladhar", "Chip Collier"]
 description = "Jai language support. For LSP support see repository docs."
@@ -11,6 +11,5 @@ name = "jails"
 language = "Jai"
 
 [grammars.jai]
-# Will replace with 'https://github.com/constantitus/tree-sitter-jai' if PR gets merged
-repository = "https://github.com/seg4lt/tree-sitter-jai"
-commit = "e9826985ad7b40fa91544a282909fa8159150d71"
+repository = "https://github.com/constantitus/tree-sitter-jai"
+commit = "082bcdb9e33c2c466e2979cabd4b9c0d79e59ea6"

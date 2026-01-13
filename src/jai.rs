@@ -1,35 +1,31 @@
-use std::fs;
 use zed::{LanguageServerId, Worktree};
 use zed_extension_api::{self as zed, Result, serde_json, settings::LspSettings};
 
-struct JaiExtension {
-    cached_binary_path: Option<String>,
+struct JaiExtension;
+struct JailsBinary {
+    path: String,
+    args: Option<Vec<String>>,
 }
 
 impl JaiExtension {
-    fn language_server_binary_path(
+    fn language_server_binary(
         &mut self,
         language_server_id: &LanguageServerId,
         worktree: &Worktree,
-    ) -> Result<String> {
+    ) -> Result<JailsBinary> {
         let language_server = language_server_id.as_ref();
-        if let Some(path) = LspSettings::for_worktree(language_server, worktree)
-            .ok()
-            .and_then(|settings| settings.binary)
-            .and_then(|binary| binary.path)
+        if let Ok(lsp_settings) = LspSettings::for_worktree(language_server, worktree)
+            && let Some(binary) = lsp_settings.binary
+            && let Some(path) = binary.path
         {
-            return Ok(path);
+            return Ok(JailsBinary {
+                path,
+                args: binary.arguments,
+            });
         }
 
         if let Some(path) = worktree.which(language_server) {
-            self.cached_binary_path = Some(path.clone());
-            return Ok(path);
-        }
-
-        if let Some(path) = &self.cached_binary_path {
-            if fs::metadata(path).map_or(false, |stat| stat.is_file()) {
-                return Ok(path.to_string());
-            }
+            return Ok(JailsBinary { path, args: None });
         }
 
         Err("Unable to locate jails binary".to_string())
@@ -38,9 +34,7 @@ impl JaiExtension {
 
 impl zed::Extension for JaiExtension {
     fn new() -> Self {
-        Self {
-            cached_binary_path: None,
-        }
+        Self
     }
 
     fn language_server_command(
@@ -48,12 +42,11 @@ impl zed::Extension for JaiExtension {
         language_server_id: &LanguageServerId,
         worktree: &Worktree,
     ) -> Result<zed::Command> {
-        let jails_binary_path = self.language_server_binary_path(language_server_id, worktree)?;
+        let jails_binary = self.language_server_binary(language_server_id, worktree)?;
         Ok(zed::Command {
-            command: jails_binary_path,
-            // args: vec!["-verbose".to_string()],
-            args: Default::default(),
-            env: Default::default(),
+            command: jails_binary.path,
+            args: jails_binary.args.unwrap_or_default(),
+            env: worktree.shell_env(),
         })
     }
 
